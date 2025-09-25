@@ -5,7 +5,6 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ValidationError, Field
 from typing import List, Any, Optional
 from sentence_transformers import SentenceTransformer
-from fastapi.middleware.cors import CORSMiddleware
 
 # --- グローバル変数 ---
 model: SentenceTransformer = None
@@ -20,22 +19,6 @@ app = FastAPI(
     version="1.1.0"
 )
 
-# --- CORSミドルウェアの設定 ---
-origins = [
-    "http://localhost",
-    "http://localhost:8000",
-    # 開発用として、任意のオリジンを許可する場合は以下を使用
-    "*"
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # --- サーバー起動時の処理 ---
 @app.on_event("startup")
 def load_models():
@@ -45,7 +28,7 @@ def load_models():
     print("モデルとインデックスの読み込みを開始します...")
     
     try:
-        model = SentenceTransformer('all-MiniLM-L6-v2')
+        model = SentenceTransformer('intfloat/multilingual-e5-large')
         index = faiss.read_index("paper_vectors.index")
         with open("metadata.json", "r", encoding="utf-8") as f:
             metadata = json.load(f)
@@ -150,3 +133,4 @@ def search_papers(request: SearchRequest):
 @app.get("/")
 def read_root():
     return {"message": "論文検索APIへようこそ！ /docs にアクセスしてください。"}
+
