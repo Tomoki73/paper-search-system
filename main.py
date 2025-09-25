@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ValidationError, Field
 from typing import List, Any, Optional
 from sentence_transformers import SentenceTransformer
+from fastapi.middleware.cors import CORSMiddleware
 
 # --- グローバル変数 ---
 model: SentenceTransformer = None
@@ -17,6 +18,22 @@ app = FastAPI(
     title="論文検索API",
     description="Sentence TransformerとFAISSを利用して、学術論文のセマンティック検索を行うAPIです。",
     version="1.1.0"
+)
+
+# --- CORSミドルウェアの設定 ---
+origins = [
+    "http://localhost",
+    "http://localhost:8000",
+    # 開発用として、任意のオリジンを許可する場合は以下を使用
+    "*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- サーバー起動時の処理 ---
