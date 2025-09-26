@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">論文詳細</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3B82F6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+    <header class="bg-white shadow p-4">
+        <div class="container mx-auto flex items-center justify-between">
+            <h1 class="text-3xl font-bold text-gray-800">論文詳細</h1>
+            <a href="index.html" class="text-blue-600 hover:underline">検索ページに戻る</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto mt-8 p-4">
+        <div id="paperContainer" class="bg-white p-6 rounded-lg shadow-lg">
+            <div id="loading" class="flex justify-center items-center py-12">
+                <div class="loading-spinner"></div>
+            </div>
+            <div id="paperContent" class="hidden">
+                <h2 id="paperTitle" class="text-3xl font-bold text-gray-800 mb-4"></h2>
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700">要約</h3>
+                        <p id="paperAbstract" class="text-gray-600 mt-2"></p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700">AIチャット</h3>
+                        <p class="text-gray-500 mt-2">チャット機能は今後実装されます。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        const paperContainer = document.getElementById('paperContainer');
+        const loadingSpinner = document.getElementById('loading');
+        const paperContent = document.getElementById('paperContent');
+        const paperTitle = document.getElementById('paperTitle');
+        const paperAbstract = document.getElementById('paperAbstract');
+        const pageTitle = document.getElementById('pageTitle');
+        const API_URL = "http://127.0.0.1:8000";
+
+        // URLパラメータから論文IDを取得する関数
+        function getPaperIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('paper_id');
+        }
+
+        // ページ読み込み時に論文情報を取得・表示
+        window.addEventListener('load', async () => {
+            const paperId = getPaperIdFromUrl();
+            if (!paperId) {
+                paperContainer.innerHTML = '<p class="text-center text-red-500">論文IDが指定されていません。</p>';
+                return;
+            }
+
+            try {
+                // ここでは、論文IDを使ってAPIから詳細情報を取得するロジックを想定
+                // 例: const response = await fetch(`${API_URL}/paper/${paperId}`);
+                // しかし、現在そのAPIエンドポイントは存在しないため、ダミーデータを使用
+                const dummyData = {
+                    title: "ダミー論文タイトル",
+                    abstract: "ここに論文の要約が表示されます。AIチャット機能もここに追加されます。このページは、検索結果から遷移する新しいページです。",
+                };
+
+                // ローディングを非表示にし、コンテンツを表示
+                loadingSpinner.classList.add('hidden');
+                paperContent.classList.remove('hidden');
+                
+                // ページタイトルとコンテンツを更新
+                pageTitle.textContent = `${dummyData.title} | 論文検索システム`;
+                paperTitle.textContent = dummyData.title;
+                paperAbstract.textContent = dummyData.abstract;
+
+            } catch (error) {
+                console.error('論文情報の取得エラー:', error);
+                loadingSpinner.classList.add('hidden');
+                paperContainer.innerHTML = `<p class="text-center text-red-500">論文情報の読み込み中にエラーが発生しました。</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
