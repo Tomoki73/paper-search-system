@@ -4,7 +4,10 @@ import json
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, ValidationError, Field
+
+
 from typing import List, Any, Optional
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
@@ -37,6 +40,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"], # すべてのHTTPメソッドを許可
     allow_headers=["*"], # すべてのHTTPヘッダーを許可
+)
+
+# CORS設定を追加
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # 開発中はすべてのオリジンを許可
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- サーバー起動時の処理 ---
