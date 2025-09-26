@@ -3,13 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>論文検索＆対話システム</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>論文検索システム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans leading-normal tracking-normal">
 
     <header class="bg-white shadow p-4">
-        <h1 class="text-3xl font-bold text-gray-800 text-center">論文検索＆対話システム</h1>
+        <h1 class="text-3xl font-bold text-gray-800 text-center">論文検索システム</h1>
     </header>
 
     <main class="container mx-auto mt-8 p-4">
@@ -22,23 +30,72 @@
         </div>
 
         <div id="results" class="mt-6 space-y-4">
-            </div>
-
-        <div id="chatModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden justify-center items-center p-4">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 relative">
-                <button id="closeChatModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800">&times;</button>
-                <h3 id="chatTitle" class="text-xl font-bold mb-4">論文タイトル</h3>
-                <div id="chatHistory" class="border p-4 h-64 overflow-y-auto mb-4 bg-gray-50 rounded-md">
-                    </div>
-                <div class="flex space-x-2">
-                    <input type="text" id="chatInput" placeholder="質問を入力してください..." class="flex-1 p-2 border border-gray-300 rounded-md">
-                    <button id="chatButton" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">送信</button>
-                </div>
-            </div>
         </div>
     </main>
     
-    <script src="script.js"></script>
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsDiv = document.getElementById('results');
+        const API_URL = "http://127.0.0.1:8000";
 
+        // 検索ボタンがクリックされた時の処理
+        searchButton.addEventListener('click', async () => {
+            const query = searchInput.value;
+            if (!query) return;
+
+            resultsDiv.innerHTML = '<p class="text-center text-gray-500">検索中...</p>';
+
+            try {
+                const response = await fetch(`${API_URL}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`サーバーエラー: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data.results);
+
+            } catch (error) {
+                console.error('検索エラー:', error);
+                resultsDiv.innerHTML = `<p class="text-center text-red-500">検索中にエラーが発生しました。サーバーが起動しているか確認してください。: ${error.message}</p>`;
+            }
+        });
+
+        // 検索結果を表示する関数
+        function displayResults(papers) {
+            resultsDiv.innerHTML = '';
+
+            if (papers.length === 0) {
+                resultsDiv.innerHTML = '<p class="text-center text-gray-500">検索結果がありませんでした。</p>';
+                return;
+            }
+
+            papers.forEach(paper => {
+                const paperElement = document.createElement('div');
+                paperElement.className = 'bg-white p-4 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer';
+                
+                // best_chunkのtextプロパティから関連テキストを取得
+                const abstractText = paper.best_chunk && paper.best_chunk.text ? paper.best_chunk.text : '要約がありません。';
+
+                paperElement.innerHTML = `
+                    <h3 class="text-xl font-bold text-blue-700">${paper.filename}</h3>
+                    <p class="text-gray-600 mt-1">類似度スコア: ${paper.score.toFixed(4)}</p>
+                    <p class="text-gray-500 mt-2 line-clamp-3">${abstractText}</p>
+                `;
+                
+                // クリックで paper.html に論文IDを渡して遷移
+                paperElement.addEventListener('click', () => {
+                    window.location.href = `paper.html?paper_id=${paper.id}`;
+                });
+
+                resultsDiv.appendChild(paperElement);
+            });
+        }
+    </script>
 </body>
 </html>
