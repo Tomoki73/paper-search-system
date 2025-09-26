@@ -82,15 +82,22 @@
                 // best_chunkのtextプロパティから関連テキストを取得
                 const abstractText = paper.best_chunk && paper.best_chunk.text ? paper.best_chunk.text : '要約がありません。';
 
+                //著者名と著作年を結合し、存在しない場合は空文字列とする
+                const authorName = paper.author || '著者不明';
+                const yearText = paper.year ? `(${paper.year})` : '';
+                const authorYearText = `${authorName} ${yearText}`.trim();
+
                 paperElement.innerHTML = `
-                    <h3 class="text-xl font-bold text-blue-700">${paper.filename}</h3>
-                    <p class="text-gray-600 mt-1">類似度スコア: ${paper.score.toFixed(4)}</p>
+                    <h3 class="text-2xl font-bold text-gray-800">${paper.filename}</h3>
+                    <p class="text-sm text-gray-500 mt-1">${authorYearText}</p>
                     <p class="text-gray-500 mt-2 line-clamp-3">${abstractText}</p>
                 `;
+                
                 
                 // クリックで paper.html に論文IDを渡して遷移
                 paperElement.addEventListener('click', () => {
                     window.location.href = `paper.html?paper_id=${paper.id}`;
+                    
                 });
 
                 resultsDiv.appendChild(paperElement);
