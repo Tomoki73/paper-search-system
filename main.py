@@ -118,7 +118,7 @@ class PaperDetailResponse(PaperResult):
     
     # 検索結果で使われる score と best_chunk は、詳細画面では不要だが、
     # 継承元のPaperResultが持つchunksを上書き定義するため、ここではそのまま。
-    
+
 class SearchResponse(BaseModel):
     results: List[PaperResultWithContext]
 class ChatRequest(BaseModel):
