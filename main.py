@@ -99,6 +99,14 @@ class PaperResultWithContext(PaperResult):
     score: float
     best_chunk: ChunkData # str から ChunkData に変更
 
+class PaperDetailResponse(PaperResult):
+    """論文の詳細情報を保持するモデル"""
+    # PaperResultを継承しているため、id, filename, titleは継承される
+    chunks: List[ChunkData] # 全てのチャンクが必要なため、Optionalを上書きして必須にする
+    
+    # 検索結果で使われる score と best_chunk は、詳細画面では不要だが、
+    # 継承元のPaperResultが持つchunksを上書き定義するため、ここではそのまま。
+    
 class SearchResponse(BaseModel):
     results: List[PaperResultWithContext]
 class ChatRequest(BaseModel):
