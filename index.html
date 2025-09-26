@@ -78,6 +78,7 @@
             papers.forEach(paper => {
                 const paperElement = document.createElement('div');
                 paperElement.className = 'bg-white p-4 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer';
+
                 paperElement.innerHTML = `
                     <h3 class="text-xl font-bold text-blue-700">${paper.filename}</h3>
                     <p class="text-gray-600 mt-1">類似度スコア: ${paper.score.toFixed(4)}</p>
@@ -85,6 +86,7 @@
                 `;
                 
                 // クリックで別ページに遷移するイベントリスナーに変更
+
                 paperElement.addEventListener('click', () => {
                     window.location.href = `paper.html?paper_id=${paper.id}`;
                 });

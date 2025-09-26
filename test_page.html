@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>論文検索チャット</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --text-color: #333;
+            --bg-color: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        h1, h2 { margin: 0; }
+        .content { padding: 20px; }
+
+        /* --- 検索ビュー --- */
+        #search-form { display: flex; gap: 10px; }
+        #search-input { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; }
+        #search-button { padding: 10px 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #search-results { margin-top: 20px; }
+        .result-item {
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .result-item:hover { background-color: #e9ecef; }
+        .result-item h3 { margin: 0 0 5px 0; color: var(--primary-color); }
+        .result-item p { margin: 0; font-size: 0.9em; color: #666; }
+        
+        /* --- チャットビュー --- */
+        #chat-view { display: none; }
+        #back-button { margin-bottom: 15px; }
+        #chat-header { border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+        #chat-history {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .chat-message {
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 80%;
+        }
+        .user-message {
+            background-color: var(--primary-color);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .ai-message {
+            background-color: #e9ecef;
+            color: var(--text-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .ai-message pre { white-space: pre-wrap; word-wrap: break-word; font-family: inherit; margin: 0; }
+        #chat-form { display: flex; gap: 10px; }
+        #chat-input { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; }
+        #chat-send-button { padding: 10px 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        /* --- 共通 --- */
+        .loader { text-align: center; padding: 20px; font-style: italic; color: #888; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header class="header">
+        <h1>論文検索チャット 📄</h1>
+    </header>
+
+    <main class="content">
+        <div id="search-view">
+            <form id="search-form">
+                <input type="text" id="search-input" placeholder="検索キーワードを入力..." required>
+                <button type="submit" id="search-button">検索</button>
+            </form>
+            <div id="search-results-container">
+                <div id="search-loader" class="loader hidden">検索中...</div>
+                <div id="search-results"></div>
+            </div>
+        </div>
+
+        <div id="chat-view">
+            <button id="back-button">← 検索結果に戻る</button>
+            <div id="chat-header">
+                <h2 id="chat-paper-title"></h2>
+            </div>
+            <div id="chat-history"></div>
+            <div id="chat-loader" class="loader hidden">AIが考え中...</div>
+            <form id="chat-form">
+                <input type="text" id="chat-input" placeholder="論文について質問する..." required>
+                <button type="submit" id="chat-send-button">送信</button>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // APIサーバーのURL
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+
+        // HTML要素の取得
+        const searchView = document.getElementById('search-view');
+        const chatView = document.getElementById('chat-view');
+        
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const searchResultsContainer = document.getElementById('search-results');
+        const searchLoader = document.getElementById('search-loader');
+
+        const backButton = document.getElementById('back-button');
+        const chatPaperTitle = document.getElementById('chat-paper-title');
+        const chatHistory = document.getElementById('chat-history');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatLoader = document.getElementById('chat-loader');
+
+        let currentPaperId = null;
+
+        // --- イベントリスナー ---
+
+        // 論文検索フォームの送信
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            searchLoader.classList.remove('hidden');
+            searchResultsContainer.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query, top_k: 10 })
+                });
+                if (!response.ok) throw new Error('検索に失敗しました。');
+                
+                const data = await response.json();
+                displaySearchResults(data.results);
+            } catch (error) {
+                searchResultsContainer.innerHTML = `<p>エラー: ${error.message}</p>`;
+            } finally {
+                searchLoader.classList.add('hidden');
+            }
+        });
+
+        // チャットフォームの送信
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = chatInput.value.trim();
+            if (!question || !currentPaperId) return;
+
+            addMessageToChat(question, 'user');
+            chatInput.value = '';
+            chatLoader.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paper_id: currentPaperId, question: question })
+                });
+                if (!response.ok) throw new Error('AIとの通信に失敗しました。');
+
+                const data = await response.json();
+                addMessageToChat(data.answer, 'ai');
+            } catch (error) {
+                addMessageToChat(`エラー: ${error.message}`, 'ai');
+            } finally {
+                chatLoader.classList.add('hidden');
+            }
+        });
+
+        // 検索結果に戻るボタン
+        backButton.addEventListener('click', () => {
+            chatView.style.display = 'none';
+            searchView.style.display = 'block';
+            currentPaperId = null;
+        });
+
+        // --- 関数 ---
+
+        // 検索結果を表示する
+        function displaySearchResults(results) {
+            searchResultsContainer.innerHTML = '';
+            if (results.length === 0) {
+                searchResultsContainer.innerHTML = '<p>該当する論文が見つかりませんでした。</p>';
+                return;
+            }
+            results.forEach(paper => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                const bestChunkText = paper.best_chunk.text || ''; // paper.best_chunkからpaper.best_chunk.textに変更
+                item.innerHTML = `<h3>${paper.title}</h3><p>関連部分: ${bestChunkText.substring(0, 150)}...</p>`;
+                item.addEventListener('click', () => selectPaper(paper));
+                searchResultsContainer.appendChild(item);
+            });
+        }
+
+        // 論文を選択したときの処理
+        async function selectPaper(paper) {
+            currentPaperId = paper.id;
+            searchView.style.display = 'none';
+            chatView.style.display = 'block';
+            chatPaperTitle.textContent = paper.title;
+            chatHistory.innerHTML = '';
+
+            // 最初にAIに要約をリクエストする
+            addMessageToChat('AIが論文を読み込んでいます...', 'ai');
+            chatLoader.classList.remove('hidden');
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        paper_id: currentPaperId, 
+                        question: 'この論文の目的、手法、結論を簡潔にまとめてください。' 
+                    })
+                });
+                if (!response.ok) throw new Error('AIによる要約の生成に失敗しました。');
+                const data = await response.json();
+                chatHistory.innerHTML = ''; // 「読み込み中...」を消去
+                addMessageToChat(data.answer, 'ai');
+            } catch (error) {
+                addMessageToChat(`エラー: ${error.message}`, 'ai');
+            } finally {
+                chatLoader.classList.add('hidden');
+            }
+        }
+
+        // チャット履歴にメッセージを追加する
+        function addMessageToChat(text, sender) {
+            const message = document.createElement('div');
+            message.className = `chat-message ${sender}-message`;
+            if (sender === 'ai') {
+                // AIの回答は整形済みテキストとして扱う
+                const pre = document.createElement('pre');
+                pre.textContent = text;
+                message.appendChild(pre);
+            } else {
+                message.textContent = text;
+            }
+            chatHistory.appendChild(message);
+            // 自動で一番下までスクロール
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+    });
+</script>
+
+</body>
+</html>
