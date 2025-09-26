@@ -52,7 +52,7 @@ def load_models():
         if not api_key:
             raise ValueError("GOOGLE_API_KEYが.envファイルに設定されていません。")
         genai.configure(api_key=api_key)
-        genai_model = genai.GenerativeModel('gemini-1.5-flash') # 無料で高速なモデル
+        genai_model = genai.GenerativeModel('gemini-2.5-flash') # 無料で高速なモデル
         print("✅ Google Geminiモデルの初期化が完了しました。")
     except Exception as e:
         raise RuntimeError(f"❌ Geminiモデルの初期化に失敗しました: {e}")
@@ -90,6 +90,8 @@ class PaperResult(BaseModel):
     id: Any
     filename: str
     title: str
+    author: Optional[str] = None
+    year: Optional[int] = None
     chunks: Optional[List[ChunkData]] = None # List[str] から List[ChunkData] に変更
 
 class PaperResultWithContext(PaperResult):
